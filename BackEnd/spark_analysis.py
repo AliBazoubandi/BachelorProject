@@ -1,5 +1,8 @@
 from pyspark.sql import SparkSession
 from pyspark.sql import functions
+from pyspark.sql.functions import col
+import matplotlib.pyplot as plt
+import seaborn as sns
 import configparser
 
 # Read the database configuration
@@ -72,5 +75,74 @@ high_traffic_ips.show(10)
 
 # save in the mysql
 high_traffic_ips.write.jdbc(url=db_url, table="high_traffic_ips", mode="append", properties=db_properties)
+
+# Example 5: Protocol Usage Analysis
+print("THIS IS THE PROTOCOL USAGE ANALYSIS EXAMPLE")
+print("******************************************************************************************************************")
+protocol_usage = df.groupBy("PROTOCOL") \
+    .agg(
+        functions.count("*").alias("count"),
+        functions.sum("IN_BYTES").alias("total_in_bytes"),
+        functions.sum("OUT_BYTES").alias("total_out_bytes")
+    ) \
+    .orderBy(functions.desc("count"))
+
+protocol_usage.show()
+
+# save in the mysql
+protocol_usage.write.jdbc(url=db_url, table="protocol_usage", mode="append", properties=db_properties)
+
+# # Example 6: Anomaly Detection
+print("THIS IS THE ANOMALY DETECTION EXAMPLE")
+print("******************************************************************************************************************")
+# Calculate mean and standard deviation for IN_BYTES and OUT_BYTES
+stats = df.select(
+    functions.mean("IN_BYTES").alias("mean_in_bytes"),
+    functions.stddev("IN_BYTES").alias("stddev_in_bytes"),
+    functions.mean("OUT_BYTES").alias("mean_out_bytes"),
+    functions.stddev("OUT_BYTES").alias("stddev_out_bytes")
+).collect()[0]
+
+mean_in_bytes = stats["mean_in_bytes"]
+stddev_in_bytes = stats["stddev_in_bytes"]
+mean_out_bytes = stats["mean_out_bytes"]
+stddev_out_bytes = stats["stddev_out_bytes"]
+
+# Define thresholds for anomaly detection
+threshold_factor = 3  # Number of standard deviations to consider an anomaly
+df = df.withColumn(
+    "anomaly",
+    functions.when(
+        (col("IN_BYTES") > mean_in_bytes + threshold_factor * stddev_in_bytes) |
+        (col("OUT_BYTES") > mean_out_bytes + threshold_factor * stddev_out_bytes),
+        1
+    ).otherwise(0)
+)
+
+anomalies_df = df.filter(col("anomaly") == 1)
+anomalies_df.show(10)
+
+# Save anomalies to MySQL
+anomalies_df.select("IPV4_SRC_ADDR", "IN_BYTES", "OUT_BYTES", "anomaly") \
+    .write.jdbc(url=db_url, table="anomalies", mode="append", properties=db_properties)
+
+anomalies_pd_df = anomalies_df.toPandas()
+
+# Scatter plot of anomalies
+plt.figure(figsize=(12, 6))
+sns.scatterplot(x='IN_BYTES', y='OUT_BYTES', data=anomalies_pd_df, color='red', label='Anomalies')
+plt.xlabel('Incoming Bytes')
+plt.ylabel('Outgoing Bytes')
+plt.title('Scatter Plot of Anomalies')
+plt.legend()
+plt.show()
+
+# Histogram of incoming bytes for anomalies
+plt.figure(figsize=(12, 6))
+plt.hist(anomalies_pd_df['IN_BYTES'], bins=50, color='red', alpha=0.7)
+plt.xlabel('Incoming Bytes')
+plt.ylabel('Frequency')
+plt.title('Histogram of Incoming Bytes for Anomalies')
+plt.show()
 
 spark.stop()
