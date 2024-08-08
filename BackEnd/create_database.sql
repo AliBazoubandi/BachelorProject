@@ -34,3 +34,15 @@ CREATE TABLE IF NOT EXISTS anomalies (
     anomaly INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Create a table to store K-Means clustering results
+CREATE TABLE IF NOT EXISTS ip_clusters (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ipv4_src_addr VARCHAR(45) NOT NULL,
+    total_in_bytes BIGINT NOT NULL,
+    total_out_bytes BIGINT NOT NULL,
+    total_in_pkts BIGINT NOT NULL,
+    total_out_pkts BIGINT NOT NULL,
+    Risk_Category VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

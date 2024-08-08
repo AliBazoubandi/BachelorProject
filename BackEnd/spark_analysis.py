@@ -1,6 +1,8 @@
 from pyspark.sql import SparkSession
 from pyspark.sql import functions
-from pyspark.sql.functions import col
+from pyspark.sql.functions import col,when
+from pyspark.ml.feature import VectorAssembler
+from pyspark.ml.clustering import KMeans
 import matplotlib.pyplot as plt
 import seaborn as sns
 import configparser
@@ -75,6 +77,39 @@ high_traffic_ips.show(10)
 
 # save in the mysql
 high_traffic_ips.write.jdbc(url=db_url, table="high_traffic_ips", mode="append", properties=db_properties)
+
+# Apply K-Means Clustering on High Traffic IPs
+assembler = VectorAssembler(inputCols=["total_in_bytes", "total_out_bytes", "total_in_pkts", "total_out_pkts"], outputCol="features")
+high_traffic_ips_features = assembler.transform(high_traffic_ips)
+
+kmeans = KMeans(k=3, seed=42)
+model = kmeans.fit(high_traffic_ips_features)
+predictions = model.transform(high_traffic_ips_features)
+
+# Map cluster numbers to risk levels (adjust as needed)
+predictions = predictions.withColumn(
+    "Risk_Category",
+    when(col("prediction") == 0, "Low Risk")
+    .when(col("prediction") == 1, "Medium Risk")
+    .otherwise("High Risk")
+)
+
+# Select relevant columns to save
+results = predictions.select(
+    col("ipv4_src_addr"), 
+    col("total_in_bytes"), 
+    col("total_out_bytes"), 
+    col("total_in_pkts"), 
+    col("total_out_pkts"), 
+    col("Risk_Category")
+)
+
+print("Results DataFrame Schema before saving:")
+results.printSchema()
+results.show(10)
+
+# Save the results to MySQL
+results.write.jdbc(url=db_url, table="ip_clusters", mode="append", properties=db_properties)
 
 # Example 5: Protocol Usage Analysis
 print("THIS IS THE PROTOCOL USAGE ANALYSIS EXAMPLE")
