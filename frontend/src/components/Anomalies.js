@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Form, Button, Pagination } from 'react-bootstrap';
+import AnomaliesChart from './AnomaliesChart';
 
 const Anomalies = () => {
   const [data, setData] = useState([]);
@@ -7,6 +8,7 @@ const Anomalies = () => {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -133,6 +135,7 @@ const Anomalies = () => {
         </tbody>
       </Table>
       <Pagination>{paginationItems}</Pagination>
+      <AnomaliesChart data={currentRows} /> {/* Pass only the current page data to the chart */}
     </div>
   );
 };

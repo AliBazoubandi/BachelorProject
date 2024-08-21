@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Table, Form, Button, Pagination } from 'react-bootstrap';
-
+import IPClustersChart from './IPClustersChart';
 
 const IPClusters = () => {
   const [data, setData] = useState([]);
@@ -14,7 +14,7 @@ const IPClusters = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('token'); // Assuming you store the JWT token in local storage
         const response = await axios.get('http://localhost:5000/api/ipClusters', {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -130,6 +130,7 @@ const IPClusters = () => {
         </tbody>
       </Table>
       <Pagination>{paginationItems}</Pagination>
+      <IPClustersChart data={currentRows} /> {/* Pass only the current page data */}
     </div>
   );
 };
